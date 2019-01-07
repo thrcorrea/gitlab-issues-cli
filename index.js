@@ -5,6 +5,8 @@ const chalk = require("chalk");
 const figlet = require("figlet");
 const shell = require("shelljs");
 const { makeGitlabApi } = require('./gitlabApi');
+const json2csv = require('json2csv').parse;
+const fs = require('fs');
 
 let ApiInstance;
 
@@ -78,14 +80,29 @@ const run = async () => {
 
   const groupId = await makeSelectiveQuestion('Selecione o grupo', groups, 'name');
 
-  const projects = await ApiInstance.listProjects(groupId);
+  const { projects } = await ApiInstance.listProjects(groupId);
 
-  console.log(projects);
+  // console.log(projects);
 
   const issues = await ApiInstance.listIssues(groupId);
 
   console.log(issues);
 
+  const parsedIssues = issues.map((issue) => {
+    return {
+      ...issue,
+      projectName: projects.filter((project) => project.id === issue.project_id)[0].name,
+    }
+  })
+
+
+  try {
+    const csv = json2csv(parsedIssues, { fields: ['projectName', 'title', 'description', 'state', 'assignees', 'labels'] });
+    // console.log(csv);''
+    fs.writeFileSync('test.csv', csv.toString(), 'utf8');
+  } catch (err) {
+    console.log(err);
+  }
   // const answers = await askQuestions();
   // const { FILENAME, EXTENSION } = answers;
 
